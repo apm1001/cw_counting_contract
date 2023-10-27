@@ -1,0 +1,4 @@
+[alias]
+wasm = "build --release --target wasm32-unknown-unknown"
+wasm-debug = "build --target wasm32-unknown-unknown"
+check-contract = "cosmwasm-check ./target/wasm32-unknown-unknown/release/counting_contract.wasm"
