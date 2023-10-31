@@ -30,7 +30,7 @@ pub mod query {
 pub mod exec {
     use cosmwasm_std::{DepsMut, Response, StdResult, MessageInfo, Env, StdError, BankMsg, Coin, Uint128};
  
-    use crate::state::{COUNTER, MINIMAL_DONATION, OWNER};
+    use crate::{state::{COUNTER, MINIMAL_DONATION, OWNER}, error::ContractError};
  
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
         let mut counter = COUNTER.load(deps.storage)?;
@@ -51,10 +51,12 @@ pub mod exec {
         Ok(resp)
     }
 
-    pub fn reset(deps: DepsMut, info: MessageInfo, new_value: u64) -> StdResult<Response> {
+    pub fn reset(deps: DepsMut, info: MessageInfo, new_value: u64) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if info.sender != owner {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(ContractError::Unauthorized { 
+                owner: owner.to_string() 
+            });
         }
 
         COUNTER.save(deps.storage, &new_value)?;
@@ -67,10 +69,12 @@ pub mod exec {
         Ok(resp)
     }
 
-    pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if info.sender != owner {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(ContractError::Unauthorized { 
+                owner: owner.to_string() 
+            });
         }
 
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
@@ -93,10 +97,12 @@ pub mod exec {
         info: MessageInfo,
         recipient: String,
         funds: Vec<Coin>
-    ) -> StdResult<Response> {
+    ) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if info.sender != owner {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(ContractError::Unauthorized { 
+                owner: owner.to_string() 
+            });
         }
 
         

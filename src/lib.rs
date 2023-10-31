@@ -3,9 +3,11 @@ use cosmwasm_std::{
 };
 
 mod contract;
+mod error;
 pub mod msg;
 mod state;
 
+use error::ContractError;
 use msg::{ExecMsg, InstantiateMsg};
 
 #[entry_point]
@@ -30,15 +32,20 @@ pub fn query(deps: Deps, _env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 }
 
 #[entry_point]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecMsg,
+) -> Result<Response, ContractError> {
     use contract::exec;
     use msg::ExecMsg::*;
 
     match msg {
-        Donate {} => exec::donate(deps, info),
+        Donate {} => exec::donate(deps, info).map_err(ContractError::Std),
         Reset { new_value } => exec::reset(deps, info, new_value),
         Withdraw {} => exec::withdraw(deps, env, info),
-        WithdrawTo { recipient, funds } => exec::withdraw_to(deps, env, info, recipient, funds)
+        WithdrawTo { recipient, funds } => exec::withdraw_to(deps, env, info, recipient, funds),
     }
 }
 
@@ -47,7 +54,7 @@ mod test {
     use crate::{
         execute, instantiate,
         msg::{ExecMsg, InstantiateMsg},
-        query,
+        query, error::ContractError,
     };
 
     use cosmwasm_std::{coin, coins, Addr, Empty};
@@ -302,6 +309,41 @@ mod test {
     }
 
     #[test]
+    fn unauthorized_withdraw() {
+        let owner = Addr::unchecked("owner");
+        let member = Addr::unchecked("member");
+
+        let mut app = App::default();
+
+        let contract_id = app.store_code(counting_contract());
+
+        let contract_addr = app
+            .instantiate_contract(
+                contract_id,
+                owner.clone(),
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom"),
+                },
+                &[],
+                "Counting contract",
+                None,
+            )
+            .unwrap();
+
+        let err = app
+            .execute_contract(member, contract_addr, &ExecMsg::Withdraw {}, &[])
+            .unwrap_err();
+
+        assert_eq!(
+            ContractError::Unauthorized {
+                owner: owner.into()
+            },
+            err.downcast().unwrap()
+        );
+    }
+
+    #[test]
     fn withdraw_to() {
         let owner = Addr::unchecked("owner");
         let sender = Addr::unchecked("sender");
@@ -341,10 +383,10 @@ mod test {
         app.execute_contract(
             owner.clone(),
             contract_addr.clone(),
-            &ExecMsg::WithdrawTo { 
-                recipient: recipient.to_string(), 
-                funds: coins(5, "atom")
-            }, 
+            &ExecMsg::WithdrawTo {
+                recipient: recipient.to_string(),
+                funds: coins(5, "atom"),
+            },
             &[],
         )
         .unwrap();
@@ -353,14 +395,54 @@ mod test {
             app.wrap().query_all_balances(recipient).unwrap(),
             coins(5, "atom")
         );
-        assert_eq!(
-            app.wrap().query_all_balances(owner).unwrap(),
-            vec![]
-        );
+        assert_eq!(app.wrap().query_all_balances(owner).unwrap(), vec![]);
         assert_eq!(app.wrap().query_all_balances(sender).unwrap(), vec![]);
         assert_eq!(
             app.wrap().query_all_balances(contract_addr).unwrap(),
             coins(5, "atom")
+        );
+    }
+
+    #[test]
+    fn unauthorized_withdraw_to() {
+        let owner = Addr::unchecked("owner");
+        let member = Addr::unchecked("member");
+
+        let mut app = App::default();
+
+        let contract_id = app.store_code(counting_contract());
+
+        let contract_addr = app
+            .instantiate_contract(
+                contract_id,
+                owner.clone(),
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom"),
+                },
+                &[],
+                "Counting contract",
+                None,
+            )
+            .unwrap();
+
+        let err = app
+            .execute_contract(
+                member, 
+                contract_addr, 
+                &ExecMsg::WithdrawTo { 
+                    recipient: owner.to_string(), 
+                    funds: coins(10, "atom") 
+                }, 
+                &[]
+            )
+            .unwrap_err();
+
+        assert_eq!(
+            ContractError::Unauthorized {
+                owner: owner.into()
+            },
+            err.downcast().unwrap()
         );
     }
 }
