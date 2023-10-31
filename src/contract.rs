@@ -28,7 +28,7 @@ pub mod query {
 }
 
 pub mod exec {
-    use cosmwasm_std::{DepsMut, Response, StdResult, MessageInfo, Env, StdError, BankMsg, Coin, Uint128};
+    use cosmwasm_std::{DepsMut, Response, StdResult, MessageInfo, Env, BankMsg, Coin, Uint128};
  
     use crate::{state::{COUNTER, MINIMAL_DONATION, OWNER}, error::ContractError};
  
