@@ -32,5 +32,11 @@ pub enum ExecMsg {
     Reset { 
         #[serde(default)]
         new_value: u64 
+    },
+    Withdraw {},
+    WithdrawTo {
+        recipient: String,
+        #[serde(default)]
+        funds: Vec<Coin> 
     }
 }
