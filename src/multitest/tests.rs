@@ -21,6 +21,7 @@ fn query_value() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
     )
     .unwrap();
@@ -42,6 +43,7 @@ fn query_incremented() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
     )
     .unwrap();
@@ -62,6 +64,7 @@ fn donate() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         None,
         coin(10, ATOM),
     )
@@ -95,6 +98,7 @@ fn donate_with_funds() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
     )
     .unwrap();
@@ -119,6 +123,7 @@ fn reset() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         None,
         coin(10, ATOM),
     )
@@ -151,6 +156,7 @@ fn withdraw() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         None,
         coin(10, ATOM),
     )
@@ -193,6 +199,7 @@ fn unauthorized_withdraw() {
         &owner,
         "Counting contract",
         None,
+        None,
         coin(10, ATOM),
     )
     .unwrap();
@@ -231,6 +238,7 @@ fn withdraw_to() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         None,
         coin(10, ATOM),
     )
@@ -278,6 +286,7 @@ fn unauthorized_withdraw_to() {
         code_id,
         &owner,
         "Counting contract",
+        None,
         None,
         coin(10, ATOM),
     )

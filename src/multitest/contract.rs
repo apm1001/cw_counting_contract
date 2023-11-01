@@ -18,14 +18,16 @@ impl CountingContract {
     }
 
     #[track_caller]
-    pub fn instantiate(
+    pub fn instantiate<'a>(
         app: &mut App,
         code_id: u64,
         sender: &Addr,
         label: &str,
+        admin: impl Into<Option<&'a Addr>>,
         counter: impl Into<Option<u64>>,
         minimal_donation: Coin,
     ) -> StdResult<Self> {
+        let admin = admin.into();
         let counter = counter.into().unwrap_or_default();
  
         app.instantiate_contract(
@@ -37,7 +39,7 @@ impl CountingContract {
             },
             &[],
             label,
-            None,
+            admin.map(Addr::to_string),
         )
         .map(CountingContract)
         .map_err(|err| err.downcast().unwrap())
