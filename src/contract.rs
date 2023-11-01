@@ -1,21 +1,31 @@
-use cosmwasm_std::{StdResult, DepsMut, Coin, Response};
+use cosmwasm_std::{StdResult, DepsMut, Coin, Response, Addr};
 use cw_storage_plus::Item;
-
-use crate::state::{STATE, State};
+use serde::{Deserialize, Serialize};
+use crate::state;
 
 
 pub fn migrate(deps: DepsMut) -> StdResult<Response> {
-    const COUNTER: Item<u64> = Item::new("counter");
-    const MINIMAL_DONATION: Item<Coin> = Item::new("minimal_donation");
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    struct State {
+        pub counter: u64,
+        pub minimal_donation: Coin
+    }
+     
+    const OLD_STATE: Item<State> = Item::new("state");
+    const OWNER: Item<Addr> = Item::new("owner");
+
+    let owner = OWNER.load(deps.storage)?;
+    let old_state = OLD_STATE.load(deps.storage)?;
  
-    let counter = COUNTER.load(deps.storage)?;
-    let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
- 
-    STATE.save(
+    let counter = old_state.counter;
+    let minimal_donation = old_state.minimal_donation;
+
+    state::STATE.save(
         deps.storage,
-        &State {
+        &state::State {
             counter,
             minimal_donation,
+            owner
         },
     )?;
  
@@ -25,7 +35,7 @@ pub fn migrate(deps: DepsMut) -> StdResult<Response> {
 pub mod query {
     use cosmwasm_std::{Deps, StdResult, DepsMut, MessageInfo, Coin, Response};
 
-    use crate::{msg::ValueResp, state::{State, STATE, OWNER}};
+    use crate::{msg::ValueResp, state::{State, STATE}};
 
     pub fn instantiate(
         deps: DepsMut,
@@ -38,9 +48,9 @@ pub mod query {
             &State {
                 counter,
                 minimal_donation,
+                owner: info.sender
             },
         )?;
-        OWNER.save(deps.storage, &info.sender)?;
         Ok(Response::new())
     }
  
@@ -59,7 +69,7 @@ pub mod exec {
     
     use cosmwasm_std::{StdResult, DepsMut, Response, MessageInfo, Env, BankMsg, Coin, Uint128};
     
-    use crate::{state::{STATE, OWNER}, error::ContractError};
+    use crate::{state::STATE, error::ContractError};
  
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
         let mut state = STATE.load(deps.storage)?;
@@ -83,7 +93,7 @@ pub mod exec {
     }
 
     pub fn reset(deps: DepsMut, info: MessageInfo, new_value: u64) -> Result<Response, ContractError> {
-        let owner = OWNER.load(deps.storage)?;
+        let owner = STATE.load(deps.storage)?.owner;
         if info.sender != owner {
             return Err(ContractError::Unauthorized { 
                 owner: owner.to_string() 
@@ -104,7 +114,7 @@ pub mod exec {
     }
 
     pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-        let owner = OWNER.load(deps.storage)?;
+        let owner = STATE.load(deps.storage)?.owner;
         if info.sender != owner {
             return Err(ContractError::Unauthorized { 
                 owner: owner.to_string() 
@@ -132,7 +142,7 @@ pub mod exec {
         recipient: String,
         funds: Vec<Coin>
     ) -> Result<Response, ContractError> {
-        let owner = OWNER.load(deps.storage)?;
+        let owner = STATE.load(deps.storage)?.owner;
         if info.sender != owner {
             return Err(ContractError::Unauthorized { 
                 owner: owner.to_string() 

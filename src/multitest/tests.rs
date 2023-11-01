@@ -3,7 +3,7 @@ use cw_multi_test::App;
  
 use crate::{msg::ValueResp, error::ContractError, state::{STATE, State}};
 use super::contract::CountingContract;
-use counting_contract_0_1::multitest::contract::CountingContract as CountingContract_0_1;
+use counting_contract_0_2::multitest::contract::CountingContract as CountingContract_0_2;
 
  
 const ATOM: &str = "atom";
@@ -325,10 +325,10 @@ fn migration() {
             .unwrap();
     });
  
-    let old_code_id = CountingContract_0_1::store_code(&mut app);
+    let old_code_id = CountingContract_0_2::store_code(&mut app);
     let new_code_id = CountingContract::store_code(&mut app);
  
-    let contract = CountingContract_0_1::instantiate(
+    let contract = CountingContract_0_2::instantiate(
         &mut app,
         old_code_id,
         &owner,
@@ -354,7 +354,8 @@ fn migration() {
         state,
         State {
             counter: 1,
-            minimal_donation: coin(10, ATOM)
+            minimal_donation: coin(10, ATOM),
+            owner
         }
     );
 }
