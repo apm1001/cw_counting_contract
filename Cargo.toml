@@ -1,6 +1,6 @@
 [package]
 name = "counting-contract"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
  
 [lib]
@@ -20,4 +20,5 @@ serde = { version = "1.0.189", features = ["derive"] }
 thiserror = "1.0.50"
 
 [dev-dependencies]
+counting-contract-0_1 = { git = "https://github.com/apm1001/cw_counting_contract.git", package = "counting-contract", features = ["tests"], rev = "before_migration" }
 cw-multi-test = "0.17.0"

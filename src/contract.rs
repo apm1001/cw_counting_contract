@@ -1,8 +1,31 @@
- 
-pub mod query {
-    use cosmwasm_std::{Deps, StdResult, Response, DepsMut, Coin, MessageInfo};
+use cosmwasm_std::{StdResult, DepsMut, Coin, Response};
+use cw_storage_plus::Item;
 
-    use crate::{msg::*, state::{COUNTER, MINIMAL_DONATION, OWNER}};
+use crate::state::{STATE, State};
+
+
+pub fn migrate(deps: DepsMut) -> StdResult<Response> {
+    const COUNTER: Item<u64> = Item::new("counter");
+    const MINIMAL_DONATION: Item<Coin> = Item::new("minimal_donation");
+ 
+    let counter = COUNTER.load(deps.storage)?;
+    let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
+ 
+    STATE.save(
+        deps.storage,
+        &State {
+            counter,
+            minimal_donation,
+        },
+    )?;
+ 
+    Ok(Response::new())
+}
+
+pub mod query {
+    use cosmwasm_std::{Deps, StdResult, DepsMut, MessageInfo, Coin, Response};
+
+    use crate::{msg::ValueResp, state::{State, STATE, OWNER}};
 
     pub fn instantiate(
         deps: DepsMut,
@@ -10,14 +33,19 @@ pub mod query {
         counter: u64, 
         minimal_donation: Coin
     ) -> StdResult<Response> {
-        COUNTER.save(deps.storage, &counter)?;
-        MINIMAL_DONATION.save(deps.storage, &minimal_donation)?;
+        STATE.save(
+            deps.storage,
+            &State {
+                counter,
+                minimal_donation,
+            },
+        )?;
         OWNER.save(deps.storage, &info.sender)?;
         Ok(Response::new())
     }
  
     pub fn value(deps: Deps) -> StdResult<ValueResp> {
-        let value = COUNTER.load(deps.storage)?;
+        let value = STATE.load(deps.storage)?.counter;
         Ok(ValueResp { value })
     }
 
@@ -28,25 +56,28 @@ pub mod query {
 }
 
 pub mod exec {
-    use cosmwasm_std::{DepsMut, Response, StdResult, MessageInfo, Env, BankMsg, Coin, Uint128};
- 
-    use crate::{state::{COUNTER, MINIMAL_DONATION, OWNER}, error::ContractError};
+    
+    use cosmwasm_std::{StdResult, DepsMut, Response, MessageInfo, Env, BankMsg, Coin, Uint128};
+    
+    use crate::{state::{STATE, OWNER}, error::ContractError};
  
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
-        let mut counter = COUNTER.load(deps.storage)?;
-        let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
-
-        if info.funds.iter().any(|coin| {
-            coin.denom == minimal_donation.denom && coin.amount >= minimal_donation.amount
-        }) {
-            counter += 1;
-            COUNTER.save(deps.storage, &counter)?;
+        let mut state = STATE.load(deps.storage)?;
+ 
+        if state.minimal_donation.amount.is_zero()
+            || info.funds.iter().any(|coin| {
+                coin.denom == state.minimal_donation.denom
+                    && coin.amount >= state.minimal_donation.amount
+            })
+        {
+            state.counter += 1;
+            STATE.save(deps.storage, &state)?;
         }
  
         let resp = Response::new()
-            .add_attribute("action", "donate")
+            .add_attribute("action", "poke")
             .add_attribute("sender", info.sender.as_str())
-            .add_attribute("counter", counter.to_string());
+            .add_attribute("counter", state.counter.to_string());
  
         Ok(resp)
     }
@@ -59,7 +90,10 @@ pub mod exec {
             });
         }
 
-        COUNTER.save(deps.storage, &new_value)?;
+        STATE.update(deps.storage, |mut state| -> StdResult<_> {
+            state.counter = new_value;
+            Ok(state)
+        })?;
  
         let resp = Response::new()
             .add_attribute("action", "donate")

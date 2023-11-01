@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Empty,
 };
 
 #[cfg(not(feature = "library"))]
@@ -52,4 +52,10 @@ pub fn execute(
         Withdraw {} => exec::withdraw(deps, env, info),
         WithdrawTo { recipient, funds } => exec::withdraw_to(deps, env, info, recipient, funds),
     }
+}
+
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
+    contract::migrate(deps)
 }

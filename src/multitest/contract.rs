@@ -1,5 +1,6 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{App, ContractWrapper, Executor};
+use crate::migrate;
 use crate::{execute, instantiate, query, msg::InstantiateMsg};
 use cosmwasm_std::{Coin, StdResult};
 use crate::error::ContractError;
@@ -13,7 +14,7 @@ impl CountingContract {
     }
 
     pub fn store_code(app: &mut App) -> u64 {
-        let contract = ContractWrapper::new(execute, instantiate, query);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_migrate(migrate);
         app.store_code(Box::new(contract))
     }
 
@@ -114,6 +115,13 @@ impl CountingContract {
     pub fn query_incremented(&self, app: &App, value: u64) -> StdResult<ValueResp> {
         app.wrap()
             .query_wasm_smart(self.0.clone(), &QueryMsg::Incremented { value })
+    }
+
+    #[track_caller]
+    pub fn migrate(app: &mut App, contract: Addr, code_id: u64, sender: &Addr) -> StdResult<Self> {
+        app.migrate_contract(sender.clone(), contract.clone(), &Empty {}, code_id)
+            .map_err(|err| err.downcast().unwrap())
+            .map(|_| Self(contract))
     }
 }
 
