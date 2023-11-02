@@ -4,7 +4,7 @@ use crate::migrate;
 use crate::{execute, instantiate, query, msg::InstantiateMsg};
 use cosmwasm_std::{Coin, StdResult};
 use crate::error::ContractError;
-use crate::msg::{ExecMsg, QueryMsg, ValueResp};
+use crate::msg::{ExecMsg, QueryMsg, ValueResp, Parent, MigrationMsg};
 
 pub struct CountingContract(Addr);
 
@@ -27,16 +27,17 @@ impl CountingContract {
         admin: impl Into<Option<&'a Addr>>,
         counter: impl Into<Option<u64>>,
         minimal_donation: Coin,
+        parent: impl Into<Option<Parent>>
     ) -> StdResult<Self> {
         let admin = admin.into();
         let counter = counter.into().unwrap_or_default();
- 
         app.instantiate_contract(
             code_id,
             sender.clone(),
             &InstantiateMsg {
                 counter,
                 minimal_donation,
+                parent: parent.into()
             },
             &[],
             label,
@@ -118,10 +119,21 @@ impl CountingContract {
     }
 
     #[track_caller]
-    pub fn migrate(app: &mut App, contract: Addr, code_id: u64, sender: &Addr) -> StdResult<Self> {
-        app.migrate_contract(sender.clone(), contract.clone(), &Empty {}, code_id)
-            .map_err(|err| err.downcast().unwrap())
-            .map(|_| Self(contract))
+    pub fn migrate(
+        app: &mut App, 
+        contract: Addr, 
+        code_id: u64, 
+        sender: &Addr,
+        parent: impl Into<Option<Parent>>
+    ) -> StdResult<Self> {
+        app.migrate_contract(
+            sender.clone(), 
+            contract.clone(), 
+            &MigrationMsg {parent: parent.into()}, 
+            code_id
+        )
+        .map_err(|err| err.downcast().unwrap())
+        .map(|_| Self(contract))
     }
 }
 

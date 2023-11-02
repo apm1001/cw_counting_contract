@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Empty,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 
 #[cfg(not(feature = "library"))]
@@ -14,7 +14,7 @@ mod state;
 pub mod multitest;
 
 use error::ContractError;
-use msg::{ExecMsg, InstantiateMsg};
+use msg::{ExecMsg, InstantiateMsg, MigrationMsg};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -23,7 +23,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    contract::instantiate(deps, info, msg.counter, msg.minimal_donation)
+    contract::instantiate(deps, info, msg.counter, msg.minimal_donation, msg.parent)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -48,7 +48,7 @@ pub fn execute(
     use msg::ExecMsg::*;
 
     match msg {
-        Donate {} => exec::donate(deps, info).map_err(ContractError::Std),
+        Donate {} => exec::donate(deps, env, info).map_err(ContractError::Std),
         Reset { new_value } => exec::reset(deps, info, new_value),
         Withdraw {} => exec::withdraw(deps, env, info),
         WithdrawTo { recipient, funds } => exec::withdraw_to(deps, env, info, recipient, funds),
@@ -57,6 +57,6 @@ pub fn execute(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> Result<Response, ContractError>  {
-    contract::migration::migrate(deps)
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrationMsg) -> Result<Response, ContractError>  {
+    contract::migration::migrate(deps, msg.parent)
 }
