@@ -9,6 +9,7 @@ mod contract;
 mod error;
 pub mod msg;
 mod state;
+
 #[cfg(any(test, feature = "tests"))]
 pub mod multitest;
 
@@ -22,7 +23,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    contract::query::instantiate(deps, info, msg.counter, msg.minimal_donation)
+    contract::instantiate(deps, info, msg.counter, msg.minimal_donation)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -56,6 +57,6 @@ pub fn execute(
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
-    contract::migrate(deps)
+pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> Result<Response, ContractError>  {
+    contract::migration::migrate(deps)
 }
